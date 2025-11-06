@@ -1,26 +1,32 @@
 import Phaser from 'phaser';
-import { BootScene } from './scenes/BootScene';
+import { GameScene } from './scenes/GameScene';
+import { WORLD, PHYSICS } from './utils/Constants';
 
 // Configuración del juego
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: WORLD.WIDTH,
+  height: WORLD.HEIGHT,
   parent: 'game-container',
   backgroundColor: '#1ca3ec',
   physics: {
     default: 'arcade',
     arcade: {
-      gravity: { y: 800, x: 0 },
-      debug: false
+      gravity: { x: PHYSICS.GRAVITY_X, y: PHYSICS.GRAVITY_Y  },
+      debug: PHYSICS.DEBUG
     }
   },
-  scene: [BootScene]
+  scene: [GameScene]
 };
 
 // Inicializar el juego
 const game = new Phaser.Game(config);
 
-// Log de confirmación
 console.log('🌊 Wave Rider iniciado!');
 console.log('Phaser version:', Phaser.VERSION);
+console.log('Config:', {
+  dimensions: `${config.width}x${config.height}`,
+  backgroundColor: config.backgroundColor,
+  physics: 'Arcade',
+  gravity: config.physics?.arcade?.gravity
+});

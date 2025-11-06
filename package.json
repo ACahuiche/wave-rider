@@ -1,0 +1,27 @@
+{
+  "name": "wave-rider",
+  "version": "1.0.0",
+  "description": "Propuesta para la Gamejam 2025 - Waver Rider es un juego de endless running donde deberas surfear en las olas sin caer",
+  "main": "index.js",
+  "scripts": {
+    "dev": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development"
+  },
+  "keywords": ["phaser", "game", "typescript", "game-jam"],
+  "author": "ACahuiche",
+  "license": "ISC",
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "copy-webpack-plugin": "^13.0.1",
+    "html-webpack-plugin": "^5.6.4",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
+  }
+}

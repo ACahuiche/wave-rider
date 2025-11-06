@@ -166,7 +166,7 @@ Ver el [tablero del proyecto](https://linear.app/cosankdev/project/wave-rider-ga
 Este es un proyecto de Game Jam personal, por lo que no acepto contribuciones de código en este momento. Sin embargo, ¡el feedback es bienvenido!
 
 Si encuentras un bug o tienes una sugerencia:
-- Abre un [Issue](https://github.com/ACahuiche/wave-rider.git/issues)
+- Abre un [Issue](https://github.com/ACahuiche/wave-rider/issues)
 - Coméntalo en [itch.io](https://acahuiche.itch.io/wave-rider) después del lanzamiento
 
 ---

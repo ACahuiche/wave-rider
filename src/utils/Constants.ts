@@ -24,6 +24,7 @@ export const PLAYER = {
     BOUNCE: 0,
     FRICTION_X: 1,
     FRICTION_Y: 0,
+    MAX_FALL_VELOCITY: 800,
 
     // Posición inicial
     START_X: 100,

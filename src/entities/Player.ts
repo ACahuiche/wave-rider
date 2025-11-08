@@ -11,7 +11,7 @@ export class Player extends Phaser.GameObjects.Rectangle {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.body.setCollideWorldBounds(true);
+    this.body.setCollideWorldBounds(false);
     this.body.setAllowGravity(true);
     this.body.setGravityY(PLAYER.GRAVITY_Y);
     this.body.setBounce(PLAYER.BOUNCE);

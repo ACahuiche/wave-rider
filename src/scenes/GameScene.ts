@@ -2,14 +2,16 @@ import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { Wave } from '../entities/Wave';
 import { WaveManager } from '../managers/WaveManager';
-import { PLAYER, WAVE, WORLD, COLORS } from '../utils/Constants';
+import { PLAYER, WAVE, WORLD, COLORS, SCORE } from '../utils/Constants';
+import { ScoreManager } from '../managers/ScoreManager';
 
 export class GameScene extends Phaser.Scene {
     // Entidades
     private player!: Player;
     private waves!: Phaser.GameObjects.Group;
-    private startRock!: Phaser.GameObjects.Rectangle; 
-    
+    private startRock!: Phaser.GameObjects.Rectangle;
+    private scoreManager!: ScoreManager;
+
     // Managers
     private waveManager!: WaveManager;
 
@@ -17,20 +19,23 @@ export class GameScene extends Phaser.Scene {
     private jumpKey!: Phaser.Input.Keyboard.Key;
 
     // Estados
-    private isRiding: boolean = false; 
+    private isRiding: boolean = false;
     private gameOver: boolean = false;
-    
+
     // Colisiones
-    private rockCollider!: Phaser.Physics.Arcade.Collider; 
+    private rockCollider!: Phaser.Physics.Arcade.Collider;
 
     // Debug UI
     private debugText!: Phaser.GameObjects.Text;
 
+    // 🆕 Nuevo texto de puntuación
+    private scoreText!: Phaser.GameObjects.Text;
+
     // 🆕 Nuevo texto de Game Over
-    private gameOverText!: Phaser.GameObjects.Text; 
+    private gameOverText!: Phaser.GameObjects.Text;
 
     // 🆕 Nueva propiedad para la tecla R
-    private restartKey!: Phaser.Input.Keyboard.Key; 
+    private restartKey!: Phaser.Input.Keyboard.Key;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -46,11 +51,23 @@ export class GameScene extends Phaser.Scene {
         // 🛠️ FIX 1: Resetear el estado de la escena al iniciar
         this.gameOver = false;
         this.isRiding = false;
-        
+
         // 🛠️ FIX 2: Asegurar que el motor de física está corriendo al iniciar la escena
         this.physics.resume();
 
         this.cameras.main.setBackgroundColor(WORLD.BACKGROUND_COLOR);
+
+        // ===================================
+        // GESTOR DE PUNTUACIÓN Y UI
+        // ===================================
+        this.scoreManager = new ScoreManager(this);
+        this.scoreText = this.add.text(15, 15, 'Score: 0', {
+            font: '24px Arial',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setScrollFactor(0);
+        this.scoreManager.start();
 
         // ===================================
         // 🛠️ FIX: INICIALIZAR UI PRIMERO 👈
@@ -70,25 +87,25 @@ export class GameScene extends Phaser.Scene {
         this.player = new Player(this, PLAYER.START_X, PLAYER.START_Y);
 
         // ===== 4. CREAR ROCA DE INICIO (Tutorial) =====
-        this.createStartRock(); 
-        
+        this.createStartRock();
+
         // 🆕 AÑADIR CONTROL DE REINICIO
         this.restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
 
         // ===== 5. CONFIGURAR COLISIONES =====
-        
+
         // 5.1 Player VS Roca
         this.physics.add.collider(this.player, this.startRock);
-        
+
         // 5.2 🌊 Olas VS Roca (Manejador de Destrucción de Roca)
         this.rockCollider = this.physics.add.collider(
             this.waves,
             this.startRock,
-            this.handleWaveRockCollision, 
+            this.handleWaveRockCollision,
             undefined,
             this
         );
-        
+
         // 5.3 Player VS Olas (Surfeo y Muerte Lateral)
         this.physics.add.collider(
             this.player,
@@ -113,19 +130,19 @@ export class GameScene extends Phaser.Scene {
     private createStartRock(): void {
         const ROCK_WIDTH = 20;
         const ROCK_HEIGHT = 20;
-        const ROCK_Y = PLAYER.START_Y + PLAYER.HEIGHT / 2 + ROCK_HEIGHT / 2 + 5; 
+        const ROCK_Y = PLAYER.START_Y + PLAYER.HEIGHT / 2 + ROCK_HEIGHT / 2 + 5;
 
         this.startRock = this.add.rectangle(
-            PLAYER.START_X , 
+            PLAYER.START_X,
             ROCK_Y + 100,
             ROCK_WIDTH,
             ROCK_HEIGHT,
-            0x606060 
-        ).setOrigin(0.5, 0.5); 
+            0x606060
+        ).setOrigin(0.5, 0.5);
 
         // 1. Añadir el cuerpo estático
-        this.physics.add.existing(this.startRock, true); 
-        
+        this.physics.add.existing(this.startRock, true);
+
         // 🛠️ FIX ERROR 1 & 2: Eliminamos las llamadas setImmovable/allowGravity
         // La bandera 'true' en physics.add.existing ya hace que sea estático.
         // La línea: this.startRock.body.setImmovable(true); es incorrecta para StaticBody.
@@ -137,27 +154,27 @@ export class GameScene extends Phaser.Scene {
      */
     private handleWaveRockCollision(rockObj: any, waveObj: any): void {
         if (!this.startRock.active) return;
-        
+
         const rock = rockObj as Phaser.GameObjects.Rectangle;
         const wave = waveObj as Wave;
-        
+
         console.log('🌊💥 Roca destruida por ola. ¡Surfea!');
 
         rock.destroy();
-        this.rockCollider.destroy(); 
+        this.rockCollider.destroy();
         this.isRiding = true;
     }
-    
+
     /**
      * 🆕 Función para iniciar el juego (se llama al primer salto en la roca)
      */
     private destroyRockAndStartGameByJump(): void {
         if (!this.startRock.active) return;
-        
+
         console.log('🚀 Primer salto: Destrucción de Roca e inicio de surfeo.');
 
         this.startRock.destroy();
-        this.rockCollider.destroy(); 
+        this.rockCollider.destroy();
         this.isRiding = true;
     }
 
@@ -168,14 +185,28 @@ export class GameScene extends Phaser.Scene {
         const player = playerObj as Player;
         const wave = waveObj as Wave;
 
+        const waveBody = wave.body as any;
+
+        const isFalling = player.body.velocity.y > 0;
+
+        // Comprueba si la parte inferior del jugador está cerca de la parte superior de la ola.
+        const isOnTop = player.body.bottom <= waveBody.top + 10; // 10px de tolerancia
+
+        if (isFalling && isOnTop) {
+            if (!this.isRiding) {
+                this.isRiding = true;
+                this.scoreManager.add(SCORE.POINTS_PER_JUMP);
+            }
+        }
+
         // 1. Lógica de Muerte Lateral
         if (!player.body!.touching.down && // Usamos '!' para manejar el tipado de Phaser
             (player.body!.touching.left || player.body!.touching.right)) {
-            
+
             this.endGame('Player golpeado lateralmente.');
-            return; 
+            return;
         }
-        
+
         // 2. 🏄 Lógica de Surfeo
         if (player.body!.touching.down || player.getCanJump()) {
             player.body!.setVelocityX(wave.body.velocity.x);
@@ -189,23 +220,23 @@ export class GameScene extends Phaser.Scene {
     private checkContinuousCollision(): void {
         const player = this.player;
         // Usamos aserción de tipo para garantizar que tiene cuerpo de Arcade
-        const playerBody = player.body as Phaser.Physics.Arcade.Body; 
+        const playerBody = player.body as Phaser.Physics.Arcade.Body;
 
         if (playerBody.velocity.y <= 0 || playerBody.touching.down) {
             return;
         }
 
         const activeWaves = this.waves.getChildren() as Wave[];
-        
+
         // ... (el resto de tu lógica checkContinuousCollision se mantiene igual)
 
         const yPrev = playerBody.prev.y;
         const deltaY = playerBody.y - yPrev;
         const playerHalfHeight = playerBody.halfHeight;
-        
+
         const xPrev = playerBody.prev.x;
-        const playerPrevLeft = xPrev - playerBody.halfWidth; 
-        const playerPrevRight = xPrev + playerBody.halfWidth; 
+        const playerPrevLeft = xPrev - playerBody.halfWidth;
+        const playerPrevRight = xPrev + playerBody.halfWidth;
 
         let lowestTimeOfImpact = Infinity;
         let hitYPosition = 0;
@@ -213,15 +244,15 @@ export class GameScene extends Phaser.Scene {
         for (const wave of activeWaves) {
             const waveBody = wave.body as Phaser.Physics.Arcade.Body;
             const waveTop = waveBody.top;
-            
-            const isHorizontallyAligned = 
-                playerPrevRight >= waveBody.left && 
+
+            const isHorizontallyAligned =
+                playerPrevRight >= waveBody.left &&
                 playerPrevLeft <= waveBody.right;
 
             if (!isHorizontallyAligned) {
                 continue;
             }
-            
+
             const playerPrevBottom = yPrev + playerHalfHeight;
             const distanceToWave = waveTop - playerPrevBottom;
 
@@ -230,27 +261,27 @@ export class GameScene extends Phaser.Scene {
             }
 
             let timeOfImpact = distanceToWave / deltaY;
-            
+
             if (timeOfImpact > 0 && timeOfImpact <= 1) {
                 if (timeOfImpact < lowestTimeOfImpact) {
                     lowestTimeOfImpact = timeOfImpact;
-                    hitYPosition = waveTop - playerHalfHeight; 
+                    hitYPosition = waveTop - playerHalfHeight;
                 }
             }
         }
 
         if (lowestTimeOfImpact < Infinity) {
             console.log(`💥 [CCD Corregido] Aterrizaje forzado.`);
-            
-            const tinyBuffer = 0.1;
-            const finalCorrectionY = hitYPosition - tinyBuffer; 
 
-            playerBody.y = finalCorrectionY; 
-            player.setY(finalCorrectionY + playerHalfHeight); 
-            
+            const tinyBuffer = 0.1;
+            const finalCorrectionY = hitYPosition - tinyBuffer;
+
+            playerBody.y = finalCorrectionY;
+            player.setY(finalCorrectionY + playerHalfHeight);
+
             playerBody.setVelocityY(0);
-            player.setCanJump(true); 
-            
+            player.setCanJump(true);
+
             playerBody.enable = false;
             this.time.delayedCall(1, () => {
                 playerBody.enable = true;
@@ -269,44 +300,48 @@ export class GameScene extends Phaser.Scene {
             this.scene.restart();
             return;
         }
-        
+
         if (this.gameOver) {
             // ⚠️ FIX DE DEBUG: Continuar la ejecución para actualizar la UI
             this.updateDebugUI();
-            return; 
+            return;
         }
-        
+
         if (this.player) {
             this.player.update();
-            
+
             if (this.isRiding) {
                 this.checkContinuousCollision();
             }
 
             // 🛠️ FIX ERROR 3: Casteamos la altura de la configuración a 'number'
-            const gameHeight = this.game.config.height as number; 
-            
-            if (this.isRiding && this.player.y > gameHeight) {
+            const gameHeight = this.game.config.height as number;
+
+            if (this.player.y > gameHeight) {
                 this.endGame('Caída de la pantalla');
             }
         }
-        
+
+        // Actualizar el texto de la puntuación
+        this.scoreText.setText(`Score: ${this.scoreManager.getScore()}`);
+
+
         const isJumpInputDown = Phaser.Input.Keyboard.JustDown(this.jumpKey) || this.input.activePointer.isDown;
-        
+
         if (isJumpInputDown) {
             if (this.player && this.player.getCanJump()) {
-                
-                if (this.startRock.active) {
-                     this.destroyRockAndStartGameByJump();
-                }
 
+                if (this.startRock.active) {
+                    this.destroyRockAndStartGameByJump();
+                }
+                this.isRiding = false;
                 this.player.jump();
             }
         }
 
         this.updateDebugUI();
     }
-    
+
     // ... (Métodos auxiliares: setupControls, createDebugUI, updateDebugUI, endGame, shutdown)
 
     private setupControls(): void {
@@ -317,7 +352,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private createDebugUI(): void {
-        this.add.text(10, 10, 'WAVE RIDER - Spawn Test', {
+        this.add.text(this.cameras.main.width - 270, 10, 'WAVE RIDER - Spawn Test', {
             fontSize: '20px',
             color: '#ffffff',
             fontFamily: 'Arial',
@@ -325,7 +360,7 @@ export class GameScene extends Phaser.Scene {
             padding: { x: 10, y: 5 }
         });
 
-        this.add.text(10, 40, 'SPACE/CLICK to jump', {
+        this.add.text(this.cameras.main.width - 186, 40, 'SPACE/CLICK to jump', {
             fontSize: '16px',
             color: '#ffffff',
             fontFamily: 'Arial',
@@ -333,7 +368,7 @@ export class GameScene extends Phaser.Scene {
             padding: { x: 10, y: 5 }
         });
 
-        this.debugText = this.add.text(10, 70, '', {
+        this.debugText = this.add.text(this.cameras.main.width - 180, 70, '', {
             fontSize: '14px',
             color: '#FFD93D',
             fontFamily: 'Arial',
@@ -365,20 +400,20 @@ export class GameScene extends Phaser.Scene {
      */
     private createGameOverUI(): void {
         this.gameOverText = this.add.text(
-            this.cameras.main.width / 2, 
-            this.cameras.main.height / 2, 
-            'GAME OVER\n\nPresiona R para volver a intentarlo', 
-            { 
-                fontSize: '40px', 
-                color: '#FF0000', 
+            this.cameras.main.width / 2,
+            this.cameras.main.height / 2,
+            'GAME OVER\n\nPresiona R para volver a intentarlo',
+            {
+                fontSize: '40px',
+                color: '#FF0000',
                 fontFamily: 'Arial',
                 backgroundColor: '#000000',
                 padding: { x: 20, y: 15 },
                 align: 'center'
             }
         ).setOrigin(0.5)
-        .setDepth(10) // Asegura que esté sobre todos los demás elementos
-        .setVisible(false); // Empieza oculto
+            .setDepth(10) // Asegura que esté sobre todos los demás elementos
+            .setVisible(false); // Empieza oculto
     }
 
     private endGame(reason: string): void {
@@ -387,10 +422,10 @@ export class GameScene extends Phaser.Scene {
         this.gameOver = true;
         this.isRiding = false;
         console.log(`💥 Game Over: ${reason}`);
-        
+
         // Pausar el mundo de física
         this.physics.pause();
-        
+        this.scoreManager.stop();
         this.waveManager.stopSpawning();
         this.player.setFillStyle(0xFF0000);
 

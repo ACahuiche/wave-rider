@@ -64,8 +64,8 @@ export const SCORE = {
 // ==== DIFICULTAD Y PROGRESIÓN ====
 export const DIFFICULTY = {
     // Spawn de olas
-    INITIAL_SPAWN_INTERVAL: 1500, // ms - intervalo inicial
-    MIN_SPAWN_INTERVAL: 800,      // ms - intervalo mínimo
+    INITIAL_SPAWN_INTERVAL: 1250, // ms - intervalo inicial
+    MIN_SPAWN_INTERVAL: 700,      // ms - intervalo mínimo
     
     // 🆕 La dificultad se ajusta cada 10 segundos
     INCREASE_INTERVAL_SECONDS: 10, 
@@ -75,10 +75,12 @@ export const DIFFICULTY = {
     MAX_WAVE_SPEED: -500,         // px/s - velocidad máxima
     
     // 🆕 COEFICIENTE DE CURVA: velocidad = baseSpeed - (tiempo_en_segundos_activos * 5)
-    SPEED_INCREASE_RATE_PER_SECOND: 5, 
+    SPEED_INCREASE_RATE_PER_SECOND: 3, 
 
     // Ajuste de Altura (Varía la altura entre el 80% y 100% del rango original)
-    HEIGHT_VARIATION_FACTOR: 0.2 // 20% de variación
+    HEIGHT_VARIATION_FACTOR: 0.2, // 20% de variación
+
+    SPAWN_INTERVAL_DECREASE: 50
 } as const;
 
 // ==== COLORES DEL JUEGO (Paleta) ====

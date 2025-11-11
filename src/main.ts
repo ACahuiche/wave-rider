@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameScene } from './scenes/GameScene';
+import { MainMenuScene } from './scenes/MainMenuScene';
 import { WORLD, PHYSICS } from './utils/Constants';
 
 // Configuración del juego
@@ -17,7 +18,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: PHYSICS.DEBUG
     }
   },
-  scene: [GameScene]
+  scene: [MainMenuScene,GameScene]
 };
 
 // Inicializar el juego

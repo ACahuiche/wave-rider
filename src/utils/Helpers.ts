@@ -37,9 +37,14 @@ export const getColorHex = (colorNumber: number): string => {
  * @returns Velocidad en px/s (negativa = hacia la izquierda)
  */
 export const calculateWaveSpeed = (elapsedTimeSeconds: number): number => {
-  const { INITIAL_WAVE_SPEED, MAX_WAVE_SPEED, SPEED_INCREASE_RATE } = DIFFICULTY;
-  const cycles = Math.floor(elapsedTimeSeconds / 10);
-  const speedIncrease = cycles * SPEED_INCREASE_RATE;
+  // 🚀 CORRECCIÓN: Renombrar SPEED_INCREASE_RATE a SPEED_INCREASE_RATE_PER_SECOND
+  const { INITIAL_WAVE_SPEED, MAX_WAVE_SPEED, SPEED_INCREASE_RATE_PER_SECOND } = DIFFICULTY;
+  
+  // Usamos DIFFICULTY.INCREASE_INTERVAL_SECONDS para robustez (asumiendo que es 10)
+  const cycles = Math.floor(elapsedTimeSeconds / DIFFICULTY.INCREASE_INTERVAL_SECONDS); 
+  
+  // 🚀 CORRECCIÓN: Usar la constante correcta en el cálculo
+  const speedIncrease = cycles * SPEED_INCREASE_RATE_PER_SECOND; 
   const newSpeed = INITIAL_WAVE_SPEED - speedIncrease;
   
   return Math.max(MAX_WAVE_SPEED, newSpeed);
@@ -52,7 +57,9 @@ export const calculateWaveSpeed = (elapsedTimeSeconds: number): number => {
  * @returns Intervalo en milisegundos
  */
 export const calculateSpawnInterval = (elapsedTimeSeconds: number): number => {
+  // 🚀 CORRECCIÓN: SPAWN_INTERVAL_DECREASE ya existe en Constants.ts (ver paso 1)
   const { INITIAL_SPAWN_INTERVAL, MIN_SPAWN_INTERVAL, SPAWN_INTERVAL_DECREASE } = DIFFICULTY;
+  
   const cycles = Math.floor(elapsedTimeSeconds / 15);
   const intervalDecrease = cycles * SPAWN_INTERVAL_DECREASE;
   const newInterval = INITIAL_SPAWN_INTERVAL - intervalDecrease;

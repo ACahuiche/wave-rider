@@ -90,6 +90,7 @@ export const COLORS = {
 
 // ==== CONFIGURACIÓN DE FÍSICA ====
 export const PHYSICS = {
+    FPS: 120,
     GRAVITY_X: 0,
     GRAVITY_Y: 0, // Sin gravedad global (cada entidad decide)
     DEBUG: true  // Cambiar a true para ver hitboxes

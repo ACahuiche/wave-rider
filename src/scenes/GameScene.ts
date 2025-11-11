@@ -11,6 +11,7 @@ export class GameScene extends Phaser.Scene {
   private waves!: Phaser.GameObjects.Group;
   private startRock!: Phaser.GameObjects.Rectangle;
   private scoreManager!: ScoreManager;
+  private distanceText!: Phaser.GameObjects.Text;
 
   // Managers
   private waveManager!: WaveManager;
@@ -67,7 +68,25 @@ export class GameScene extends Phaser.Scene {
       stroke: '#000000',
       strokeThickness: 4
     }).setScrollFactor(0);
+
+    this.distanceText = this.add.text(
+      this.cameras.main.width - 15, // 15px de margen derecho
+      15, // 15px de margen superior
+      '0m', // Texto inicial en formato metros
+      {
+          font: '24px Arial',
+          color: '#ffffff',
+          stroke: '#000000',
+          strokeThickness: 4
+      }
+  )
+  .setOrigin(1, 0) // 👈 Origen en la esquina superior derecha para alineación
+  .setScrollFactor(0)
+  .setDepth(10);
+
     this.scoreManager.start();
+
+    
 
     // ===================================
     // 🛠️ FIX: INICIALIZAR UI PRIMERO 👈
@@ -199,6 +218,7 @@ export class GameScene extends Phaser.Scene {
       if (!this.isRiding) {
         this.isRiding = true;
         this.scoreManager.add(SCORE.POINTS_PER_JUMP);
+        this.scoreManager.setIsDistanceActive(true);
       }
     }
 
@@ -313,6 +333,8 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.scoreManager.update(delta);
+
     if (this.player) {
       this.player.update();
 
@@ -330,6 +352,7 @@ export class GameScene extends Phaser.Scene {
 
     // Actualizar el texto de la puntuación
     this.scoreText.setText(`Score: ${this.scoreManager.getScore()}`);
+    this.distanceText.setText(`${this.scoreManager.getDistance()}m`);
 
 
     const isJumpInputDown = Phaser.Input.Keyboard.JustDown(this.jumpKey) || this.input.activePointer.isDown;
@@ -360,7 +383,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createDebugUI(): void {
-    this.add.text(this.cameras.main.width - 270, 10, 'WAVE RIDER - Spawn Test', {
+    this.add.text((this.cameras.main.width /2) - 130, 10, 'WAVE RIDER - Spawn Test', {
       fontSize: '20px',
       color: '#ffffff',
       fontFamily: 'Arial',
@@ -368,7 +391,7 @@ export class GameScene extends Phaser.Scene {
       padding: { x: 10, y: 5 }
     });
 
-    this.add.text(this.cameras.main.width - 186, 40, 'SPACE/CLICK to jump', {
+    this.add.text((this.cameras.main.width / 2) - 90, 40, 'SPACE/CLICK to jump', {
       fontSize: '16px',
       color: '#ffffff',
       fontFamily: 'Arial',
@@ -376,7 +399,7 @@ export class GameScene extends Phaser.Scene {
       padding: { x: 10, y: 5 }
     });
 
-    this.debugText = this.add.text(this.cameras.main.width - 180, 70, '', {
+    this.debugText = this.add.text((this.cameras.main.width/2) - 90, 70, '', {
       fontSize: '14px',
       color: '#FFD93D',
       fontFamily: 'Arial',

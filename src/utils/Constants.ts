@@ -24,7 +24,7 @@ export const PLAYER = {
     BOUNCE: 0,
     FRICTION_X: 1,
     FRICTION_Y: 0,
-    MAX_FALL_VELOCITY: 800,
+    MAX_FALL_VELOCITY: 500,
 
     // Posición inicial
     START_X: 100,
@@ -57,23 +57,30 @@ export const WAVE = {
 export const SCORE = {
     POINTS_PER_SECOND: 10,      // Puntos pasivos por sobrevivir
     POINTS_PER_JUMP: 50,         // Puntos por salto exitoso
-    POINTS_PER_WAVE_PASSED: 100 // Bonus por pasar una ola
+    POINTS_PER_WAVE_PASSED: 100, // Bonus por pasar una ola
+    DISTANCE_PER_SECOND: 5
 } as const;
 
 // ==== DIFICULTAD Y PROGRESIÓN ====
 export const DIFFICULTY = {
     // Spawn de olas
-    INITIAL_SPAWN_INTERVAL: 1500, // ms - intervalo inicial
-    MIN_SPAWN_INTERVAL: 800,      // ms - intervalo mínimo
-    SPAWN_INTERVAL_DECREASE: 50,  // ms - reducción cada ciclo
-
+    INITIAL_SPAWN_INTERVAL: 1250, // ms - intervalo inicial
+    MIN_SPAWN_INTERVAL: 700,      // ms - intervalo mínimo
+    
+    // 🆕 La dificultad se ajusta cada 10 segundos
+    INCREASE_INTERVAL_SECONDS: 10, 
+    
     // Velocidad de olas
-    INITIAL_WAVE_SPEED: -200,     // px/s - velocidad inicial
+    INITIAL_WAVE_SPEED: -200,     // px/s - velocidad inicial (Debe ser WAVE.SPEED_X)
     MAX_WAVE_SPEED: -500,         // px/s - velocidad máxima
-    SPEED_INCREASE_RATE: 5,       // px/s - aumento por ciclo
+    
+    // 🆕 COEFICIENTE DE CURVA: velocidad = baseSpeed - (tiempo_en_segundos_activos * 5)
+    SPEED_INCREASE_RATE_PER_SECOND: 3, 
 
-    // Tiempo
-    DIFFICULTY_INCREASE_INTERVAL: 10000 // ms - cada cuánto aumenta dificultad
+    // Ajuste de Altura (Varía la altura entre el 80% y 100% del rango original)
+    HEIGHT_VARIATION_FACTOR: 0.2, // 20% de variación
+
+    SPAWN_INTERVAL_DECREASE: 50
 } as const;
 
 // ==== COLORES DEL JUEGO (Paleta) ====
@@ -90,6 +97,7 @@ export const COLORS = {
 
 // ==== CONFIGURACIÓN DE FÍSICA ====
 export const PHYSICS = {
+    FPS: 60,
     GRAVITY_X: 0,
     GRAVITY_Y: 0, // Sin gravedad global (cada entidad decide)
     DEBUG: true  // Cambiar a true para ver hitboxes

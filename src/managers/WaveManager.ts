@@ -1,121 +1,170 @@
 // src/managers/WaveManager.ts
 import Phaser from 'phaser';
 import { Wave } from '../entities/Wave';
-import { WAVE } from '../utils/Constants';
+import { WAVE, DIFFICULTY } from '../utils/Constants';
 
 /**
- * WaveManager - Gestiona el spawn automático de olas
- * - Spawn en intervalos regulares
- * - Altura aleatoria
- * - Pool de objetos para optimización
+ * WaveManager - Gestiona el spawn automático de olas y la dificultad progresiva.
  */
 export class WaveManager {
   private scene: Phaser.Scene;
   private waves: Phaser.GameObjects.Group;
   private spawnTimer?: Phaser.Time.TimerEvent;
-  private spawnInterval: number;
-  private isSpawning: boolean = false;
+
+  private currentWaveSpeed: number;
+  private currentSpawnInterval: number;
+
+  private timeActiveSeconds: number = 0;
+  private difficultyTimer!: Phaser.Time.TimerEvent;
+  private isDifficultyActive: boolean = false;
 
   constructor(scene: Phaser.Scene, waves: Phaser.GameObjects.Group) {
     this.scene = scene;
     this.waves = waves;
-    this.spawnInterval = 1500; // ms - valor inicial
+    // Usa las constantes actualizadas, incluyendo los nuevos valores
+    this.currentWaveSpeed = DIFFICULTY.INITIAL_WAVE_SPEED;
+    this.currentSpawnInterval = DIFFICULTY.INITIAL_SPAWN_INTERVAL;
 
     console.log('✅ WaveManager creado');
   }
 
   /**
-   * Iniciar el spawn automático de olas
+   * Iniciar el spawn automático de olas.
    */
   public startSpawning(): void {
-    if (this.isSpawning) {
-      console.warn('⚠️ WaveManager ya está spawneando');
-      return;
+    this.timeActiveSeconds = 0;
+    this.isDifficultyActive = true;
+
+    // 1. Inicializar/Reiniciar el timer de spawn
+    if (this.spawnTimer) {
+      this.spawnTimer.destroy();
     }
 
-    this.isSpawning = true;
-
-    // Crear timer que se repite
     this.spawnTimer = this.scene.time.addEvent({
-      delay: this.spawnInterval,
+      delay: this.currentSpawnInterval,
       callback: this.spawnWave,
       callbackScope: this,
       loop: true
     });
 
-    console.log('🌊 WaveManager: Spawn automático iniciado');
-    console.log(`   Intervalo: ${this.spawnInterval}ms`);
+    // 2. Inicializar el timer de AUMENTO DE DIFICULTAD
+    if (this.difficultyTimer) {
+      this.difficultyTimer.destroy();
+    }
+
+    this.difficultyTimer = this.scene.time.addEvent({
+      delay: DIFFICULTY.INCREASE_INTERVAL_SECONDS * 1000,
+      callback: this.increaseDifficulty,
+      callbackScope: this,
+      loop: true
+    });
+
+    console.log('⏱️ WaveManager: Spawn y Dificultad iniciados.');
   }
 
+
   /**
-   * Detener el spawn de olas
+   * Detener el spawn de olas y la progresión de dificultad.
    */
   public stopSpawning(): void {
     if (this.spawnTimer) {
       this.spawnTimer.destroy();
-      this.spawnTimer = undefined;
     }
-    this.isSpawning = false;
-    console.log('🛑 WaveManager: Spawn detenido');
+    if (this.difficultyTimer) {
+      this.difficultyTimer.destroy();
+    }
+    this.isDifficultyActive = false;
+  }
+
+  /**
+   * Se llama cada 10 segundos. Recalcula velocidad e intervalo.
+   */
+  private increaseDifficulty(): void {
+    this.timeActiveSeconds += DIFFICULTY.INCREASE_INTERVAL_SECONDS;
+
+    // -------------------------------------
+    // A. CALCULAR NUEVA VELOCIDAD
+    // -------------------------------------
+    const newSpeed = DIFFICULTY.INITIAL_WAVE_SPEED -
+      (this.timeActiveSeconds * DIFFICULTY.SPEED_INCREASE_RATE_PER_SECOND);
+
+    this.currentWaveSpeed = Math.max(newSpeed, DIFFICULTY.MAX_WAVE_SPEED);
+
+    // -------------------------------------
+    // B. REDUCIR INTERVALO DE SPAWN (Fórmula Proporcional al Nuevo Balance)
+    // -------------------------------------
+
+    const maxSpeedDelta = Math.abs(DIFFICULTY.MAX_WAVE_SPEED - DIFFICULTY.INITIAL_WAVE_SPEED);
+    const currentSpeedDelta = Math.abs(this.currentWaveSpeed - DIFFICULTY.INITIAL_WAVE_SPEED);
+
+    // Normalizar el factor de velocidad (0 a 1)
+    const speedFactor = currentSpeedDelta / maxSpeedDelta;
+
+    const intervalRange = DIFFICULTY.INITIAL_SPAWN_INTERVAL - DIFFICULTY.MIN_SPAWN_INTERVAL;
+
+    const intervalReduction = intervalRange * speedFactor;
+
+    let newInterval = DIFFICULTY.INITIAL_SPAWN_INTERVAL - intervalReduction;
+
+    this.currentSpawnInterval = Math.max(newInterval, DIFFICULTY.MIN_SPAWN_INTERVAL);
+
+    // -------------------------------------
+    // C. APLICAR CAMBIOS AL TIMER (Solución a read-only)
+    // -------------------------------------
+    if (this.spawnTimer) {
+      this.spawnTimer.destroy();
+    }
+
+    this.spawnTimer = this.scene.time.addEvent({
+      delay: this.currentSpawnInterval,
+      callback: this.spawnWave,
+      callbackScope: this,
+      loop: true
+    });
+
+    console.log(`📈 Dificultad aumentada: Velocidad: ${this.currentWaveSpeed.toFixed(1)}, Intervalo: ${this.currentSpawnInterval.toFixed(0)}ms`);
+    console.log(`🚀 Nuevo Gap Aproximado: ${Math.abs(this.currentWaveSpeed * this.currentSpawnInterval / 1000).toFixed(0)}px`);
   }
 
   /**
    * Generar una nueva ola
    */
   private spawnWave(): void {
-    // Posición X: Fuera de pantalla a la derecha
-    const x = WAVE.INITIAL_SPAWN_X;
+    // 1. Variación de Altura (aumenta la dificultad en altura)
+    const heightRange = WAVE.MAX_Y - WAVE.MIN_Y;
+    const variation = heightRange * DIFFICULTY.HEIGHT_VARIATION_FACTOR;
 
-    // Posición Y: Altura aleatoria entre MIN_Y y MAX_Y
-    const y = Phaser.Math.Between(WAVE.MIN_Y, WAVE.MAX_Y);
+    const minSpawnY = WAVE.MIN_Y + variation / 2;
+    const maxSpawnY = WAVE.MAX_Y - variation / 2;
 
-    // Crear nueva ola
-    const wave = new Wave(this.scene, x, y);
+    const spawnY = Phaser.Math.Between(minSpawnY, maxSpawnY);
+
+    // 2. Crear nueva ola
+    const wave = new Wave(this.scene, WAVE.INITIAL_SPAWN_X, spawnY);
     this.waves.add(wave);
 
-    console.log(`🌊 Ola spawneada en (${x}, ${y})`);
+    // 3. Aplicar Velocidad Actual
+    (wave.body as Phaser.Physics.Arcade.Body).setVelocityX(this.currentWaveSpeed);
   }
 
-  /**
-   * Cambiar el intervalo de spawn (para aumentar dificultad)
-   */
-  public setSpawnInterval(newInterval: number): void {
-    this.spawnInterval = Math.max(800, newInterval); // Mínimo 800ms
-
-    // Reiniciar timer con nuevo intervalo
-    if (this.isSpawning && this.spawnTimer) {
-      this.stopSpawning();
-      this.startSpawning();
-    }
-
-    console.log(`⏱️ WaveManager: Intervalo actualizado a ${this.spawnInterval}ms`);
-  }
-
-  /**
-   * Obtener el intervalo actual
-   */
+  // ... (el resto de getters y métodos auxiliares se mantiene)
   public getSpawnInterval(): number {
-    return this.spawnInterval;
+    return Math.round(this.currentSpawnInterval);
   }
 
-  /**
-   * Limpiar todas las olas
-   */
+  public getCurrentWaveSpeed(): number {
+    return Math.round(this.currentWaveSpeed);
+  }
+
+  public getActiveWaveCount(): number {
+    return this.waves.getLength();
+  }
+
   public clearAllWaves(): void {
     this.waves.clear(true, true);
     console.log('🗑️ Todas las olas eliminadas');
   }
 
-  /**
-   * Obtener cantidad de olas activas
-   */
-  public getActiveWaveCount(): number {
-    return this.waves.getLength();
-  }
-
-  /**
-   * Destruir el manager
-   */
   public destroy(): void {
     this.stopSpawning();
     this.clearAllWaves();
